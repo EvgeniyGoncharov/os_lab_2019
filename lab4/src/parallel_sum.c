@@ -36,11 +36,11 @@ struct SumArgs {
   return sum;
 }*/
 
-void *ThreadSum(void *args) {
+/**void *ThreadSum(void *args) {
   struct SumArgs *sum_args = (struct SumArgs *)args;
   return (void *)(size_t)Sum(sum_args);
 }
-
+*/
 int main(int argc, char **argv) 
 {
    /*
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
     } else{
       args[i].end = i * step + step;
     }
-    if (pthread_create(&threads[i], NULL, ThreadSum, (void *)&args)) {
+    if (pthread_create(&threads[i], NULL, Sum, (void *)&args)) {
       printf("Error: pthread_create failed!\n");
       return 1;
     }

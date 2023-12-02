@@ -15,5 +15,8 @@ find_min_max.o : utils.h find_min_max.h
 process_memory: process_memory.c
 	$(CC) -o process_memory process_memory.c
 
+parallel_sum: parallel_sum.c utils.h utils.c
+	$(CC) -pthread -L. -I. -o project parallel_sum.c utils.c -lsum
+
 clean :
 	rm utils.o find_min_max.o 
