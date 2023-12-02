@@ -17,7 +17,13 @@
 #include "find_min_max.c"
 #include "utils.h"
 
+
+void alarm_handler(int signum){
+        isSignal = true;
+    }
+
 int main(int argc, char **argv) {
+    static bool isSignal = false;
     int seed = -1;
     int array_size = -1;
     int pnum = -1;
@@ -101,7 +107,7 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < pnum; i++) {
         child_pid[i] = fork();
-        signal(SIGTERM, alarm_handler);
+        
         if (child_pid >= 0) {
             active_child_processes += 1;
             if (child_pid == 0) {
@@ -131,8 +137,8 @@ int main(int argc, char **argv) {
             printf("Fork failed!\n");
             return 1;
         }
-        if(timer > 0){
-            alarm(timer);
+        alarm(timer);
+        if(isSignal){            
             for(int i = 0; i < pnum; i++){
                 kill(child_pid[i], SIGTERM);
             }
