@@ -14,7 +14,7 @@
 
 #include <getopt.h>
 
-#include "find_min_max.h"
+#include "find_min_max.c"
 #include "utils.h"
 
 int main(int argc, char **argv) {
