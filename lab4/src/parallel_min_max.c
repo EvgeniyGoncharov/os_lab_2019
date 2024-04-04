@@ -17,17 +17,17 @@
 #include "find_min_max.c"
 #include "utils.h"
 
+volatile sig_atomic_t isSignal = false;
 
-void alarm_handler(int signum){
-        isSignal = true;
-    }
+void alarm_handler(int signum) {
+    isSignal = true;
+}
 
 int main(int argc, char **argv) {
-    static bool isSignal = false;
     int seed = -1;
     int array_size = -1;
     int pnum = -1;
-    int timer;
+    int timer = -1; // Initialize timer
     bool with_files = false;
 
     while (true) {
@@ -69,10 +69,11 @@ int main(int argc, char **argv) {
                 break;
             case 't':
                 timer = atoi(optarg);
-                if(timer <= 0){
-                    printf("time is a positive number\n");
+                if (timer <= 0) {
+                    printf("timeout must be a positive number\n");
                     return 1;
                 }
+                break; // Added break statement here
             case '?':
                 break;
             default:
@@ -86,14 +87,14 @@ int main(int argc, char **argv) {
     }
 
     if (seed == -1 || array_size == -1 || pnum == -1) {
-        printf("Usage: %s --seed \"num\" --array_size \"num\" --pnum \"num\" \n", argv[0]);
+        printf("Usage: %s --seed \"num\" --array_size \"num\" --pnum \"num\" [--timeout \"num\"]\n", argv[0]);
         return 1;
     }
 
     int *array = malloc(sizeof(int) * array_size);
     GenerateArray(array, array_size, seed);
 
-    int **pipes = malloc(pnum * sizeof(int*));
+    int **pipes = malloc(pnum * sizeof(int *));
     for (int i = 0; i < pnum; i++) {
         pipes[i] = malloc(2 * sizeof(int));
         pipe(pipes[i]);
@@ -107,15 +108,15 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < pnum; i++) {
         child_pid[i] = fork();
-        
-        if (child_pid >= 0) {
+
+        if (child_pid[i] >= 0) {
             active_child_processes += 1;
-            if (child_pid == 0) {
+            if (child_pid[i] == 0) {
                 struct MinMax local_min_max;
                 int start_index = i * array_size / pnum;
                 int end_index = (i == pnum - 1) ? array_size : (i + 1) * array_size / pnum;
                 local_min_max = GetMinMax(array, start_index, end_index);
-                
+
                 if (with_files) {
                     char filename[16];
                     sprintf(filename, "minmax%d.txt", i);
@@ -137,17 +138,24 @@ int main(int argc, char **argv) {
             printf("Fork failed!\n");
             return 1;
         }
-        alarm(timer);
-        if(isSignal){            
-            for(int i = 0; i < pnum; i++){
-                kill(child_pid[i], SIGTERM);
-            }
-        }
+    }
+
+    if (timer > 0) { // Check if timer is set
+        signal(SIGALRM, alarm_handler); // Set signal handler for SIGALRM
+        alarm(timer); // Set alarm for timeout
     }
 
     while (active_child_processes > 0) {
         wait(NULL);
         active_child_processes -= 1;
+    }
+
+    if (timer > 0 && isSignal) { // Check if timeout occurred
+        for (int i = 0; i < pnum; i++) {
+            kill(child_pid[i], SIGKILL); // Send SIGKILL to child processes
+        }
+        printf("Timeout occurred. Sent SIGKILL to child processes.\n");
+        return 1; // Exit with error code
     }
 
     struct MinMax min_max;
