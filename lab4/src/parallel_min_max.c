@@ -14,10 +14,10 @@
 
 #include <getopt.h>
 
-#include "find_min_max.c"
+#include "find_min_max.h"
 #include "utils.h"
 
-volatile sig_atomic_t isSignal = false;
+static bool isSignal = false;
 
 void alarm_handler(int signum) {
     isSignal = true;
@@ -33,12 +33,14 @@ int main(int argc, char **argv) {
     while (true) {
         int current_optind = optind ? optind : 1;
 
-        static struct option options[] = {{"seed", required_argument, 0, 0},
-                                          {"array_size", required_argument, 0, 0},
-                                          {"pnum", required_argument, 0, 0},
-                                          {"by_files", no_argument, 0, 'f'},
-                                          {"timeout", required_argument, 0, 't'},
-                                          {0, 0, 0, 0}};
+        static struct option options[] = {
+            {"seed", required_argument, 0, 0},
+            {"array_size", required_argument, 0, 0},
+            {"pnum", required_argument, 0, 0},
+            {"by_files", no_argument, 0, 'f'},
+            {"timeout", required_argument, 0, 't'},
+            {0, 0, 0, 0}
+        };
 
         int option_index = 0;
         int c = getopt_long(argc, argv, "f", options, &option_index);
@@ -189,7 +191,7 @@ int main(int argc, char **argv) {
     }
     free(pipes);
 
-    printf("Min: %d\n", min_max.min);
+    printf("\nMin: %d\n", min_max.min);
     printf("Max: %d\n", min_max.max);
     printf("Elapsed time: %fms\n", elapsed_time);
 

@@ -1,3 +1,4 @@
+#pragma once 
 #ifndef FIND_MIN_MAX_H
 #define FIND_MIN_MAX_H
 
