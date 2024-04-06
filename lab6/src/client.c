@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +11,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#define true 1
+#define false 0
 struct Server {
   char ip[255];
   int port;
@@ -30,7 +31,7 @@ uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   return result % mod;
 }
 
-bool ConvertStringToUI64(const char *str, uint64_t *val) {
+int ConvertStringToUI64(const char *str, uint64_t *val) {
   char *end = NULL;
   unsigned long long i = strtoull(str, &end, 10);
   if (errno == ERANGE) {
@@ -48,7 +49,7 @@ bool ConvertStringToUI64(const char *str, uint64_t *val) {
 int main(int argc, char **argv) {
   uint64_t k = -1;
   uint64_t mod = -1;
-  char servers[255] = {'\0'}; // TODO: explain why 255
+  char servers[255] = {'\0'}; 
 
   while (true) {
     int current_optind = optind ? optind : 1;
@@ -69,14 +70,11 @@ int main(int argc, char **argv) {
       switch (option_index) {
       case 0:
         ConvertStringToUI64(optarg, &k);
-        // TODO: your code here
         break;
       case 1:
         ConvertStringToUI64(optarg, &mod);
-        // TODO: your code here
         break;
       case 2:
-        // TODO: your code here
         memcpy(servers, optarg, strlen(optarg));
         break;
       default:
@@ -98,18 +96,27 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // TODO: for one server here, rewrite with servers from file
-  unsigned int servers_num = 1;
-  struct Server *to = malloc(sizeof(struct Server) * servers_num);
-  // TODO: delete this and parallel work between servers
-  to[0].port = 20001;
-  memcpy(to[0].ip, "127.0.0.1", sizeof("127.0.0.1"));
+  FILE *fp = fopen(servers, "r");
+  if (fp == NULL) {
+    perror("Error opening servers file");
+    return 1;
+  }
 
-  // TODO: work continiously, rewrite to make parallel
+  unsigned int servers_num = 0;
+  struct Server *to = NULL;
+  char line[255];
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    servers_num++;
+    to = realloc(to, servers_num * sizeof(struct Server));
+    sscanf(line, "%s %d", to[servers_num - 1].ip, &to[servers_num - 1].port);
+  }
+  fclose(fp);
+
   for (int i = 0; i < servers_num; i++) {
     struct hostent *hostname = gethostbyname(to[i].ip);
     if (hostname == NULL) {
       fprintf(stderr, "gethostbyname failed with %s\n", to[i].ip);
+      fprintf(stderr, "gethostbyname failed with %s\n", to[i].port);
       exit(1);
     }
 
@@ -129,8 +136,6 @@ int main(int argc, char **argv) {
       exit(1);
     }
 
-    // TODO: for one server
-    // parallel between servers
     uint64_t begin = 1;
     uint64_t end = k;
 
@@ -150,8 +155,6 @@ int main(int argc, char **argv) {
       exit(1);
     }
 
-    // TODO: from one server
-    // unite results
     uint64_t answer = 0;
     memcpy(&answer, response, sizeof(uint64_t));
     printf("answer: %llu\n", answer);
