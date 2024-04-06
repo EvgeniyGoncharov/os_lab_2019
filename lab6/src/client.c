@@ -18,6 +18,7 @@ struct Server {
   int port;
 };
 
+// Функция для вычисления произведения с остатком
 uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
   uint64_t result = 0;
   a = a % mod;
@@ -27,29 +28,14 @@ uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
     a = (a * 2) % mod;
     b /= 2;
   }
-
   return result % mod;
 }
 
-int ConvertStringToUI64(const char *str, uint64_t *val) {
-  char *end = NULL;
-  unsigned long long i = strtoull(str, &end, 10);
-  if (errno == ERANGE) {
-    fprintf(stderr, "Out of uint64_t range: %s\n", str);
-    return false;
-  }
-
-  if (errno != 0)
-    return false;
-
-  *val = i;
-  return true;
-}
-
+// Главная функция
 int main(int argc, char **argv) {
   uint64_t k = -1;
   uint64_t mod = -1;
-  char servers[255] = {'\0'}; 
+  char servers[255] = {'\0'};
 
   while (true) {
     int current_optind = optind ? optind : 1;
@@ -69,10 +55,10 @@ int main(int argc, char **argv) {
     case 0: {
       switch (option_index) {
       case 0:
-        ConvertStringToUI64(optarg, &k);
+        k = strtoull(optarg, NULL, 10);
         break;
       case 1:
-        ConvertStringToUI64(optarg, &mod);
+        mod = strtoull(optarg, NULL, 10);
         break;
       case 2:
         memcpy(servers, optarg, strlen(optarg));
@@ -112,11 +98,12 @@ int main(int argc, char **argv) {
   }
   fclose(fp);
 
+  uint64_t total = 1;
+
   for (int i = 0; i < servers_num; i++) {
     struct hostent *hostname = gethostbyname(to[i].ip);
     if (hostname == NULL) {
       fprintf(stderr, "gethostbyname failed with %s\n", to[i].ip);
-      fprintf(stderr, "gethostbyname failed with %s\n", to[i].port);
       exit(1);
     }
 
@@ -139,6 +126,11 @@ int main(int argc, char **argv) {
     uint64_t begin = 1;
     uint64_t end = k;
 
+    // Разделение диапазона для текущего сервера
+    uint64_t range = (end - begin + 1) / servers_num;
+    begin += i * range;
+    end = (i == servers_num - 1) ? end : begin + range - 1;
+
     char task[sizeof(uint64_t) * 3];
     memcpy(task, &begin, sizeof(uint64_t));
     memcpy(task + sizeof(uint64_t), &end, sizeof(uint64_t));
@@ -157,11 +149,15 @@ int main(int argc, char **argv) {
 
     uint64_t answer = 0;
     memcpy(&answer, response, sizeof(uint64_t));
-    printf("answer: %llu\n", answer);
+    printf("Server %s:%d answer: %llu\n", to[i].ip, to[i].port, answer);
+
+    total = MultModulo(total, answer, mod);
 
     close(sck);
   }
   free(to);
+
+  printf("Total result: %llu\n", total);
 
   return 0;
 }
