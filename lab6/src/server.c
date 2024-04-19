@@ -42,7 +42,10 @@ uint64_t Factorial(const struct FactorialArgs *args) {
 void *ThreadFactorial(void *args) {
   struct FactorialArgs *fargs = (struct FactorialArgs *)args;
   uint64_t result = Factorial(fargs);
-  return (void *)(uint64_t *)result;
+  // Выделяем память под результат и возвращаем указатель на нее
+  uint64_t *res_ptr = (uint64_t *)malloc(sizeof(uint64_t));
+  *res_ptr = result;
+  return (void *)res_ptr;
 }
 
 int main(int argc, char **argv) {
@@ -124,29 +127,36 @@ int main(int argc, char **argv) {
 
     pthread_t thread;
     int read_size;
-    struct FactorialArgs args;
+    struct FactorialArgs *args = (struct FactorialArgs *)malloc(sizeof(struct FactorialArgs));
 
-    read_size = recv(client_fd, &args, sizeof(args), 0);
+    read_size = recv(client_fd, args, sizeof(*args), 0);
     if (read_size < 0) {
       perror("recv");
       close(client_fd);
       continue;
     }
 
-    printf("Received task: begin=%llu, end=%llu, mod=%llu\n", args.begin, args.end, args.mod);
+    printf("Received task: begin=%llu, end=%llu, mod=%llu\n", args->begin, args->end, args->mod);
 
-    uint64_t result;
-    if (pthread_create(&thread, NULL, ThreadFactorial, (void *)&args)) {
+    // Создаем поток, передавая аргументы через копию
+    if (pthread_create(&thread, NULL, ThreadFactorial, (void *)args)) {
       fprintf(stderr, "Error: pthread_create failed!\n");
       close(client_fd);
+      free(args); // Освобождаем память, так как поток не создан
       continue;
     }
 
-    if (pthread_join(thread, (void **)&result)) {
+    // Ждем завершения потока и получаем результат
+    uint64_t *result_ptr;
+    if (pthread_join(thread, (void **)&result_ptr)) {
       fprintf(stderr, "Error: pthread_join failed!\n");
       close(client_fd);
+      free(args); // Освобождаем память аргументов
       continue;
     }
+
+    uint64_t result = *result_ptr;
+    free(result_ptr); // Освобождаем память под результат
 
     printf("Computed result: %llu\n", result);
 

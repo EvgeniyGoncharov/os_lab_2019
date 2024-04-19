@@ -71,6 +71,7 @@ int main(int argc, char **argv) {
                 break;
             case 't':
                 timer = atoi(optarg);
+                printf("timer = %d\n", timer);
                 if (timer <= 0) {
                     printf("timeout must be a positive number\n");
                     return 1;
